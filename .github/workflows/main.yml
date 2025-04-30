@@ -1,0 +1,33 @@
+name: Android Build
+
+on:
+  push:
+    branches:
+      - zack_1.66.0  # 触发条件，可以根据需要修改
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: '11'  # 设置 Java 版本
+
+      - name: Make Gradle executable
+        run: chmod +x ./gradlew  # 确保 gradlew 可执行
+
+      - name: Build the app
+        run: |
+          ./gradlew assembleRelease  # 构建 release 版本的 APK
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v2
+        with:
+          name: my-app-apk
+          path: app/build/outputs/apk/release/app-release.apk  # 替换为 APK 的实际路径

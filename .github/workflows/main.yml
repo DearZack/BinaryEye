@@ -13,6 +13,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        
+      - name: Decode JKS file from Base64
+        run: echo "$JKS_BASE64" | base64 --decode > your-keystore.jks
+        env:
+          JKS_BASE64: ${{ secrets.JKS_BASE64 }}
 
       - name: Set up JDK
         uses: actions/setup-java@v1

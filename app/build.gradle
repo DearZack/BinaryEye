@@ -14,11 +14,10 @@ android {
 
 	signingConfigs {
 		release {
-			keyAlias System.getenv('ANDROID_KEY_ALIAS')
-			keyPassword System.getenv('ANDROID_KEY_PASSWORD')
-			storePassword System.getenv('ANDROID_STORE_PASSWORD')
-			def filePath = System.getenv('ANDROID_KEYFILE')
-			storeFile filePath ? file(filePath) : null
+			keyAlias System.getenv('KEY_ALIAS')
+			keyPassword System.getenv('KEY_PASSWORD')
+			storePassword System.getenv('STORE_PASSWORD')
+			storeFile rootProject.file("release.jks")
 		}
 	}
 

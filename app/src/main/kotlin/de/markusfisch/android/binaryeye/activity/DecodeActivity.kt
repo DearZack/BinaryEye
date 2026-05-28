@@ -20,6 +20,7 @@ import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -96,6 +97,7 @@ class DecodeActivity : AbstractBaseActivity() {
 	private lateinit var stampView: TextView
 	private lateinit var recreationView: ImageView
 	private lateinit var labelView: EditText
+	private lateinit var forbidBatchDelete: CheckBox
 	private lateinit var fab: FloatingActionButton
 	private lateinit var scan: Scan
 	private lateinit var format: String
@@ -117,6 +119,7 @@ class DecodeActivity : AbstractBaseActivity() {
 	private var lastParsedDataTitleResId = 0
 	private var showingDimmed = false
 	private var label: String? = null
+	private var isChecked = false
 	private var recreationSize = 0
 
 	override fun onActivityResult(
@@ -165,6 +168,7 @@ class DecodeActivity : AbstractBaseActivity() {
 		stampView = findViewById(R.id.stamp)
 		recreationView = findViewById(R.id.recreation)
 		labelView = findViewById(R.id.label)
+		forbidBatchDelete = findViewById(R.id.forbid_batch_delete)
 		fab = findViewById(R.id.open)
 
 		contentHeadlineView.setText(
@@ -200,6 +204,8 @@ class DecodeActivity : AbstractBaseActivity() {
 				labelView.setText(it)
 				label = it
 			}
+			isChecked = scan.forbidBatchDelete != 0
+			forbidBatchDelete.isChecked = isChecked
 		} else {
 			labelHeadlineView.visibility = View.GONE
 			labelView.visibility = View.GONE
@@ -220,6 +226,11 @@ class DecodeActivity : AbstractBaseActivity() {
 			if (newLabel != (label ?: "")) {
 				db.renameScan(id, newLabel)
 				label = newLabel
+			}
+			val isChecked = forbidBatchDelete.isChecked
+			if (isChecked != this.isChecked) {
+				db.setDeletable(id, isChecked)
+				this.isChecked = isChecked
 			}
 		}
 		if (action.executed) {

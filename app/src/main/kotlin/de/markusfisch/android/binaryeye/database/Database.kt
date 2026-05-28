@@ -49,7 +49,8 @@ class Database {
 			$SCANS_GTIN_COUNTRY,
 			$SCANS_GTIN_ADD_ON,
 			$SCANS_GTIN_PRICE,
-			$SCANS_GTIN_ISSUE_NUMBER
+			$SCANS_GTIN_ISSUE_NUMBER,
+			$SCANS_FORBID_BATCH_DELETE
 			FROM $SCANS
 			${getWhereClause(query)}
 			ORDER BY $SCANS_PINNED DESC, $SCANS_DATETIME DESC
@@ -65,6 +66,15 @@ class Database {
 			OR $SCANS_FORMAT LIKE ?"""
 	} else {
 		""
+	}
+
+	private fun getWhereClauseWithDeletable(
+		query: String?,
+		prefix: String = "WHERE"
+	) = if (query?.isNotEmpty() == true) {
+		"""$prefix ($SCANS_TEXT LIKE ? OR $SCANS_NAME LIKE ?) AND ($SCANS_FORBID_BATCH_DELETE IS NULL OR $SCANS_FORBID_BATCH_DELETE == 0)"""
+	} else {
+		"""$prefix ($SCANS_FORBID_BATCH_DELETE IS NULL OR $SCANS_FORBID_BATCH_DELETE == 0)"""
 	}
 
 	private fun getWhereArguments(
@@ -93,7 +103,8 @@ class Database {
 			$SCANS_GTIN_COUNTRY,
 			$SCANS_GTIN_ADD_ON,
 			$SCANS_GTIN_PRICE,
-			$SCANS_GTIN_ISSUE_NUMBER
+			$SCANS_GTIN_ISSUE_NUMBER,
+			$SCANS_FORBID_BATCH_DELETE
 			FROM $SCANS
 			WHERE $SCANS_ID IN (${ids.joinToString(",")})
 			ORDER BY $SCANS_PINNED DESC, $SCANS_DATETIME DESC
@@ -121,7 +132,8 @@ class Database {
 			$SCANS_GTIN_COUNTRY,
 			$SCANS_GTIN_ADD_ON,
 			$SCANS_GTIN_PRICE,
-			$SCANS_GTIN_ISSUE_NUMBER
+			$SCANS_GTIN_ISSUE_NUMBER,
+			$SCANS_FORBID_BATCH_DELETE
 			FROM $SCANS
 			WHERE $SCANS_ID = ?
 		""".trimMargin(), arrayOf("$id")
@@ -151,7 +163,8 @@ class Database {
 				it.getString(SCANS_DATETIME),
 				it.getLong(SCANS_ID),
 				it.getString(SCANS_NAME),
-				it.getInt(SCANS_PINNED) != 0
+				it.getInt(SCANS_PINNED) != 0,
+				it.getInt(SCANS_FORBID_BATCH_DELETE),
 			)
 		} else {
 			null
@@ -208,6 +221,7 @@ class Database {
 				scan.price?.let { put(SCANS_GTIN_PRICE, it) }
 				scan.issueNumber?.let { put(SCANS_GTIN_ISSUE_NUMBER, it) }
 				put(SCANS_PINNED, if (scan.pinned) 1 else 0)
+				put(SCANS_FORBID_BATCH_DELETE, scan.forbidBatchDelete)
 			}
 		)
 	}
@@ -264,12 +278,23 @@ class Database {
 	}
 
 	fun removeScans(query: String? = null) {
-		db.delete(SCANS, getWhereClause(query, ""), getWhereArguments(query))
+		db.delete(SCANS, getWhereClauseWithDeletable(query, ""), getWhereArguments(query))
 	}
 
 	fun renameScan(id: Long, name: String) {
 		val cv = ContentValues()
 		cv.put(SCANS_NAME, name)
+		db.update(SCANS, cv, "$SCANS_ID = ?", arrayOf("$id"))
+	}
+
+	fun setDeletable(id: Long, deletable: Boolean) {
+		val delete = if (deletable) {
+			1
+		} else {
+			0
+		}
+		val cv = ContentValues()
+		cv.put(SCANS_FORBID_BATCH_DELETE, delete)
 		db.update(SCANS, cv, "$SCANS_ID = ?", arrayOf("$id"))
 	}
 
@@ -280,7 +305,7 @@ class Database {
 	}
 
 	private class OpenHelper(context: Context) :
-		SQLiteOpenHelper(context, FILE_NAME, null, 10) {
+		SQLiteOpenHelper(context, FILE_NAME, null, 11) {
 		override fun onCreate(db: SQLiteDatabase) {
 			db.createScans()
 		}
@@ -317,6 +342,9 @@ class Database {
 			if (oldVersion < 10) {
 				db.addPinnedColumn()
 			}
+			if (oldVersion < 11) {
+				db.addForbidBatchDeleteColumn()
+			}
 		}
 	}
 
@@ -351,6 +379,7 @@ class Database {
 		const val SCANS_GTIN_PRICE = "gtin_price"
 		const val SCANS_GTIN_ISSUE_NUMBER = "gtin_issue_number"
 		const val SCANS_PINNED = "pinned"
+		const val SCANS_FORBID_BATCH_DELETE = "forbid_batch_delete"
 
 		private fun SQLiteDatabase.createScans() {
 			execSQL("DROP TABLE IF EXISTS $SCANS".trimMargin())
@@ -375,7 +404,8 @@ class Database {
 					$SCANS_GTIN_ADD_ON TEXT,
 					$SCANS_GTIN_PRICE TEXT,
 					$SCANS_GTIN_ISSUE_NUMBER TEXT,
-					$SCANS_PINNED INTEGER NOT NULL DEFAULT 0
+					$SCANS_PINNED INTEGER NOT NULL DEFAULT 0,
+					$SCANS_FORBID_BATCH_DELETE INTEGER
 				)""".trimMargin()
 			)
 		}
@@ -445,6 +475,11 @@ class Database {
 			execSQL(
 				"ALTER TABLE $SCANS ADD COLUMN $SCANS_PINNED INTEGER NOT NULL DEFAULT 0"
 			)
+		}
+
+		private fun SQLiteDatabase.addForbidBatchDeleteColumn() {
+			execSQL("ALTER TABLE $SCANS ADD $SCANS_FORBID_BATCH_DELETE INTEGER")
+			execSQL("UPDATE $SCANS SET $SCANS_FORBID_BATCH_DELETE = 0")
 		}
 	}
 }

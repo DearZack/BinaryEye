@@ -42,7 +42,8 @@ private fun exportCsv(
 		Database.SCANS_GTIN_COUNTRY,
 		Database.SCANS_GTIN_ADD_ON,
 		Database.SCANS_GTIN_PRICE,
-		Database.SCANS_GTIN_ISSUE_NUMBER
+		Database.SCANS_GTIN_ISSUE_NUMBER,
+		Database.SCANS_FORBID_BATCH_DELETE
 	)
 	val indices = columns.map {
 		cursor.getColumnIndex(it)

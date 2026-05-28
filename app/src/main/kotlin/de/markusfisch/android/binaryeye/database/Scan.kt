@@ -27,7 +27,8 @@ data class Scan(
 	val dateTime: String = getDateTime(),
 	var id: Long = 0L,
 	val label: String? = null,
-	val pinned: Boolean = false
+	val pinned: Boolean = false,
+	val forbidBatchDelete: Int = 0
 ) {
 	// Needs to be overwritten manually, as ByteArray is an array and
 	// this isn't handled well by Kotlin.
@@ -57,6 +58,7 @@ data class Scan(
 				country == other.country &&
 				addOn == other.addOn &&
 				price == other.price &&
+				forbidBatchDelete == other.forbidBatchDelete &&
 				issueNumber == other.issueNumber &&
 				label == other.label &&
 				pinned == other.pinned
@@ -79,6 +81,7 @@ data class Scan(
 		result = 31 * result + (country?.hashCode() ?: 0)
 		result = 31 * result + (addOn?.hashCode() ?: 0)
 		result = 31 * result + (price?.hashCode() ?: 0)
+		result = 31 * result + (forbidBatchDelete.hashCode())
 		result = 31 * result + (issueNumber?.hashCode() ?: 0)
 		result = 31 * result + (label?.hashCode() ?: 0)
 		result = 31 * result + pinned.hashCode()
@@ -133,6 +136,7 @@ fun Scan.toBundle() = Bundle().apply {
 	putLong(SCAN_ID, id)
 	putString(SCAN_LABEL, label)
 	putBoolean(SCAN_PINNED, pinned)
+	putInt(SCAN_FORBID_BATCH_DELETE, forbidBatchDelete)
 }
 
 fun Bundle.toScan(): Scan? {
@@ -159,7 +163,8 @@ fun Bundle.toScan(): Scan? {
 			dateTime = getString(SCAN_DATE_TIME) ?: getDateTime(),
 			id = getLong(SCAN_ID, 0L),
 			label = getString(SCAN_LABEL),
-			pinned = getBoolean(SCAN_PINNED, false)
+			pinned = getBoolean(SCAN_PINNED, false),
+			forbidBatchDelete = getInt(SCAN_FORBID_BATCH_DELETE, 0)
 		)
 	} catch (_: IllegalArgumentException) {
 		null
@@ -207,3 +212,4 @@ private const val SCAN_DATE_TIME = "date_time"
 private const val SCAN_ID = "id"
 private const val SCAN_LABEL = "label"
 private const val SCAN_PINNED = "pinned"
+private const val SCAN_FORBID_BATCH_DELETE = "forbid_batch_delete"

@@ -15,10 +15,11 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.PAT }}
 
-      - name: Fetch upstream tags
+      - name: Fetch upstream tags and history
         run: |
           git remote add upstream https://github.com/markusfisch/BinaryEye.git || true
-          git fetch upstream --tags
+          # 提取 upstream 的所有分支和 tags，确保本地拥有完整的历史和所需的 blobs，以便 3-way merge 成功
+          git fetch upstream '+refs/heads/*:refs/remotes/upstream/*' --tags
 
       - name: Get latest upstream tag
         id: tag

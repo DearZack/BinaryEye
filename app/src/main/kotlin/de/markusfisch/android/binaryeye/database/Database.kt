@@ -277,10 +277,45 @@ class Database {
 
 	fun removeScan(id: Long) {
 		db.delete(SCANS, "$SCANS_ID = ?", arrayOf("$id"))
+		setBatchDeleteForbidden(id, false)
 	}
 
 	fun removeScans(query: String? = null) {
-		db.delete(SCANS, getWhereClause(query, ""), getWhereArguments(query))
+		val forbiddenIds = getForbiddenBatchDeleteIds()
+		if (forbiddenIds.isEmpty()) {
+			db.delete(SCANS, getWhereClause(query, ""), getWhereArguments(query))
+		} else {
+			val baseWhere = getWhereClause(query, "")
+			val idList = forbiddenIds.joinToString(",")
+			val customWhere = if (baseWhere.isEmpty()) {
+				"$SCANS_ID NOT IN ($idList)"
+			} else {
+				"($baseWhere) AND $SCANS_ID NOT IN ($idList)"
+			}
+			db.delete(SCANS, customWhere, getWhereArguments(query))
+		}
+	}
+
+	fun getForbiddenBatchDeleteIds(): Set<String> {
+		return context.getSharedPreferences("forbid_batch_delete", Context.MODE_PRIVATE)
+			.getStringSet("ids", emptySet()) ?: emptySet()
+	}
+
+	fun setBatchDeleteForbidden(id: Long, forbid: Boolean) {
+		val prefs = context.getSharedPreferences("forbid_batch_delete", Context.MODE_PRIVATE)
+		val ids = prefs.getStringSet("ids", emptySet())?.toMutableSet() ?: mutableSetOf()
+		if (forbid) {
+			ids.add(id.toString())
+		} else {
+			ids.remove(id.toString())
+		}
+		prefs.edit().putStringSet("ids", ids).apply()
+	}
+
+	fun isBatchDeleteForbidden(id: Long): Boolean {
+		val prefs = context.getSharedPreferences("forbid_batch_delete", Context.MODE_PRIVATE)
+		val ids = prefs.getStringSet("ids", emptySet()) ?: emptySet()
+		return ids.contains(id.toString())
 	}
 
 	fun renameScan(id: Long, name: String) {
